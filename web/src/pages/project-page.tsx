@@ -178,6 +178,7 @@ export function ProjectPage() {
 function jobLabel(kind: Job["kind"]) {
   if (kind === "sync") return t("project:Pulling the repository");
   if (kind === "push") return t("project:Pushing the translations");
+  if (kind === "import") return t("project:Importing translations");
   return t("project:Machine translating");
 }
 

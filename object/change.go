@@ -23,6 +23,7 @@ const (
 	ActionMemory    = "memory"
 	ActionSync      = "sync"
 	ActionPush      = "push"
+	ActionImport    = "import"
 )
 
 // Change is one entry of a project's history: a translation saved, a suggestion made, a sync or a push.

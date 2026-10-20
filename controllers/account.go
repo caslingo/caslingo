@@ -15,6 +15,8 @@
 package controllers
 
 import (
+	"net"
+
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/caslingo/caslingo/conf"
 	"github.com/caslingo/caslingo/format"
@@ -56,8 +58,11 @@ func (c *ApiController) Signin() {
 // @Description signs in as "admin" without Casdoor, when devSignin = true and the request comes from this computer
 // @router /dev-signin [post]
 func (c *ApiController) DevSignin() {
-	ip := c.getClientIp()
-	if !conf.GetConfigBool("devSignin") || (ip != "127.0.0.1" && ip != "::1") {
+	// the address of the connection itself, not a forwarded header anyone can set; and nothing forwarded at all,
+	// since a reverse proxy on this computer (CasWAF, Nginx) connects from 127.0.0.1 too
+	host, _, _ := net.SplitHostPort(c.Ctx.Request.RemoteAddr)
+	forwarded := c.Ctx.Request.Header.Get("X-Forwarded-For") != "" || c.Ctx.Request.Header.Get("X-Real-IP") != ""
+	if !conf.GetConfigBool("devSignin") || (host != "127.0.0.1" && host != "::1") || forwarded {
 		c.ResponseError("Sign-in without Casdoor is turned off")
 		return
 	}

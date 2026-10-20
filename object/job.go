@@ -28,6 +28,7 @@ const (
 	JobSync      = "sync"
 	JobPush      = "push"
 	JobTranslate = "translate"
+	JobImport    = "import"
 
 	JobRunning  = "running"
 	JobDone     = "done"
@@ -176,6 +177,8 @@ func runJob(ctx context.Context, projectName string, job *Job) {
 		err = runPush(ctx, project, job)
 	case JobTranslate:
 		err = runTranslate(ctx, project, job, job.Languages, job.options)
+	case JobImport:
+		err = runImport(project, job)
 	default:
 		err = fmt.Errorf("unknown job: %s", job.Kind)
 	}
@@ -210,7 +213,7 @@ func finishJob(ctx context.Context, projectName string, job *Job, err error) {
 	}
 	project, _ := GetProject(projectName)
 	if project != nil {
-		if job.Kind != JobTranslate {
+		if job.Kind == JobSync || job.Kind == JobPush {
 			project.LastError = ""
 			if err != nil {
 				project.LastError = err.Error()

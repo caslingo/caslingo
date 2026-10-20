@@ -59,5 +59,6 @@ func InitAPI() {
 	web.Router("/api/download-translations", &controllers.ApiController{}, "GET:DownloadTranslations")
 	web.Router("/api/download-file", &controllers.ApiController{}, "GET:DownloadFile")
 	web.Router("/api/upload-source", &controllers.ApiController{}, "POST:UploadSource")
+	web.Router("/api/import-translations", &controllers.ApiController{}, "POST:ImportTranslations")
 	web.Router("/api/webhook", &controllers.ApiController{}, "POST:Webhook")
 }

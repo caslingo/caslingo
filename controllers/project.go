@@ -105,10 +105,7 @@ func (c *ApiController) GetProject() {
 // @Param project query string true "The project name"
 // @router /get-project-secrets [get]
 func (c *ApiController) GetProjectSecrets() {
-	user := c.RequireSignedInUser()
-	if user == nil {
-		return
-	}
+	user := c.GetSessionUser()
 	project := c.getMaintainedProject(user)
 	if project == nil {
 		return
@@ -149,10 +146,7 @@ func (c *ApiController) AddProject() {
 // @Param body body object.Project true "The project"
 // @router /update-project [post]
 func (c *ApiController) UpdateProject() {
-	user := c.RequireSignedInUser()
-	if user == nil {
-		return
-	}
+	user := c.GetSessionUser()
 	project := c.getMaintainedProject(user)
 	if project == nil {
 		return
@@ -162,7 +156,7 @@ func (c *ApiController) UpdateProject() {
 	if !c.readJsonBody(updated) {
 		return
 	}
-	if !user.IsAdmin && !containsString(updated.Maintainers, user.Name) {
+	if user != nil && !user.IsAdmin && !containsString(updated.Maintainers, user.Name) {
 		// a maintainer cannot lock themselves out
 		updated.Maintainers = append(updated.Maintainers, user.Name)
 	}
@@ -180,10 +174,7 @@ func (c *ApiController) UpdateProject() {
 // @Param project query string true "The project name"
 // @router /regenerate-project-tokens [post]
 func (c *ApiController) RegenerateProjectTokens() {
-	user := c.RequireSignedInUser()
-	if user == nil {
-		return
-	}
+	user := c.GetSessionUser()
 	project := c.getMaintainedProject(user)
 	if project == nil {
 		return
@@ -229,10 +220,7 @@ func (c *ApiController) DeleteProject() {
 // @Param body body object.Component true "The component"
 // @router /add-component [post]
 func (c *ApiController) AddComponent() {
-	user := c.RequireSignedInUser()
-	if user == nil {
-		return
-	}
+	user := c.GetSessionUser()
 	project := c.getMaintainedProject(user)
 	if project == nil {
 		return
@@ -259,10 +247,7 @@ func (c *ApiController) AddComponent() {
 // @Param body body object.Component true "The component"
 // @router /update-component [post]
 func (c *ApiController) UpdateComponent() {
-	user := c.RequireSignedInUser()
-	if user == nil {
-		return
-	}
+	user := c.GetSessionUser()
 	project := c.getMaintainedProject(user)
 	if project == nil {
 		return
@@ -287,10 +272,7 @@ func (c *ApiController) UpdateComponent() {
 // @Param component query string true "The component name"
 // @router /delete-component [post]
 func (c *ApiController) DeleteComponent() {
-	user := c.RequireSignedInUser()
-	if user == nil {
-		return
-	}
+	user := c.GetSessionUser()
 	project := c.getMaintainedProject(user)
 	if project == nil {
 		return

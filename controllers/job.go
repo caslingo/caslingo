@@ -35,16 +35,11 @@ func (c *ApiController) StartJob() {
 		return
 	}
 
-	bearer, err := c.getBearerProject()
-	if err != nil {
-		c.ResponseError(err.Error())
-		return
-	}
 	author := ""
 	if user != nil {
 		author = user.Name
 	}
-	if !project.IsMaintainer(user) && (bearer == nil || bearer.Name != project.Name) {
+	if !project.IsMaintainer(user) && !c.hasProjectToken(project) {
 		c.ResponseError("Only the project's maintainers can do this")
 		return
 	}
@@ -92,10 +87,7 @@ func (c *ApiController) GetJobs() {
 // @Param project query string true "The project name"
 // @router /cancel-job [post]
 func (c *ApiController) CancelJob() {
-	user := c.RequireSignedInUser()
-	if user == nil {
-		return
-	}
+	user := c.GetSessionUser()
 	project := c.getMaintainedProject(user)
 	if project == nil {
 		return
@@ -152,15 +144,12 @@ func (c *ApiController) GetTerms() {
 }
 
 func (c *ApiController) getTranslatedProject() *object.Project {
-	user := c.RequireSignedInUser()
-	if user == nil {
-		return nil
-	}
+	user := c.GetSessionUser()
 	project := c.getProject(user)
 	if project == nil {
 		return nil
 	}
-	if !project.IsTranslator(user) {
+	if !project.IsTranslator(user) && !c.hasProjectToken(project) {
 		c.ResponseError("Only the project's translators can do this")
 		return nil
 	}

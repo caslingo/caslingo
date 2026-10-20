@@ -176,7 +176,7 @@ export interface UnitHelp {
 export interface Job {
   id: string;
   project: string;
-  kind: "sync" | "push" | "translate";
+  kind: "sync" | "push" | "translate" | "import";
   languages: string[];
   author: string;
   status: "running" | "done" | "failed" | "canceled";

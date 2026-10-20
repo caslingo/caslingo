@@ -417,7 +417,7 @@ func (f *MarkdownFormat) Parse(source []byte) ([]*Unit, error) {
 // translation was made from this version of the source: the same blocks in the same order.
 func (f *MarkdownFormat) ParseTranslation(source []byte, translation []byte) (map[string]string, error) {
 	sourceTexts, keys := textPieces(parseMarkdown(source))
-	translationTexts, _ := textPieces(parseMarkdown(translation))
+	translationTexts, _ := textPieces(parseMarkdown(mergeAdmonitionTitles(source, translation)))
 
 	if len(sourceTexts) != len(translationTexts) {
 		return nil, fmt.Errorf("the translation has %d texts but the source has %d", len(translationTexts), len(sourceTexts))
@@ -478,6 +478,42 @@ func (f *MarkdownFormat) Write(source []byte, translations map[string]string, op
 		return nil, nil
 	}
 	return []byte(strings.Join(out, "\n")), nil
+}
+
+var admonitionOpener = regexp.MustCompile(`^\s*:::[\w-]+`)
+
+// mergeAdmonitionTitles undoes what Crowdin does to note boxes: it writes ":::tip Title" as ":::tip" with the title
+// on the next line. Where the source's n-th note box has a title and the translation's has none, the line after it
+// becomes the title again, so that the two files line up.
+func mergeAdmonitionTitles(source []byte, translation []byte) []byte {
+	titled := []bool{}
+	for _, line := range strings.Split(string(source), "\n") {
+		line = strings.TrimSuffix(line, "\r")
+		if admonitionOpener.MatchString(line) {
+			titled = append(titled, admonitionTitle.MatchString(line))
+		}
+	}
+
+	lines := strings.Split(string(translation), "\n")
+	res := make([]string, 0, len(lines))
+	n := 0
+	for i := 0; i < len(lines); i++ {
+		line := strings.TrimSuffix(lines[i], "\r")
+		if admonitionOpener.MatchString(line) {
+			if n < len(titled) && titled[n] && !admonitionTitle.MatchString(line) && i+1 < len(lines) {
+				next := strings.TrimSpace(lines[i+1])
+				if next != "" && !startsBlock(strings.TrimSuffix(lines[i+1], "\r")) {
+					res = append(res, strings.TrimRight(lines[i], " \r")+" "+next)
+					i++
+					n++
+					continue
+				}
+			}
+			n++
+		}
+		res = append(res, lines[i])
+	}
+	return []byte(strings.Join(res, "\n"))
 }
 
 var (

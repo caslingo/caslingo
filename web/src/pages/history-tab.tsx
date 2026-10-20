@@ -28,6 +28,8 @@ function actionLabel(action: string) {
       return t("history:pulled");
     case "push":
       return t("history:pushed");
+    case "import":
+      return t("history:imported");
   }
   return action;
 }

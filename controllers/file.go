@@ -113,12 +113,7 @@ func (c *ApiController) UploadSource() {
 	if project == nil {
 		return
 	}
-	bearer, err := c.getBearerProject()
-	if err != nil {
-		c.ResponseError(err.Error())
-		return
-	}
-	if !project.IsMaintainer(user) && (bearer == nil || bearer.Name != project.Name) {
+	if !project.IsMaintainer(user) && !c.hasProjectToken(project) {
 		c.ResponseError("Only the project's maintainers can do this")
 		return
 	}
@@ -137,7 +132,7 @@ func (c *ApiController) UploadSource() {
 		return
 	}
 
-	err = object.SaveUploadedSource(project.Name, c.GetString("path"), data)
+	err := object.SaveUploadedSource(project.Name, c.GetString("path"), data)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
@@ -150,6 +145,47 @@ func (c *ApiController) UploadSource() {
 		}
 	}
 	c.ResponseOk()
+}
+
+// ImportTranslations
+// @Title ImportTranslations
+// @Description takes the translations of a zip of translation files laid out as in the repository (an export from
+// Crowdin or another platform); pull the project first. It runs as an import job:
+// curl -H "Authorization: Bearer <access token>" -H "Content-Type: application/zip" --data-binary @export.zip ".../api/import-translations?project=x"
+// @Param project query string true "The project name"
+// @router /import-translations [post]
+func (c *ApiController) ImportTranslations() {
+	user := c.GetSessionUser()
+	project := c.getMaintainedProject(user)
+	if project == nil {
+		return
+	}
+
+	data := c.Ctx.Input.RequestBody
+	if file, _, err := c.GetFile("file"); err == nil {
+		defer file.Close()
+		data, err = io.ReadAll(file)
+		if err != nil {
+			c.ResponseError(err.Error())
+			return
+		}
+	}
+	err := object.SaveImportZip(project.Name, data)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	author := ""
+	if user != nil {
+		author = user.Name
+	}
+	job, err := object.StartJob(project, object.JobImport, nil, nil, author)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	c.ResponseOk(job)
 }
 
 // Webhook

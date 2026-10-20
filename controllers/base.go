@@ -163,12 +163,20 @@ func (c *ApiController) getProject(user *object.User) *object.Project {
 	return project
 }
 
+// hasProjectToken tells whether the request carries the project's access token, which lets CI jobs and scripts
+// do what the project's maintainers can.
+func (c *ApiController) hasProjectToken(project *object.Project) bool {
+	bearer, err := c.getBearerProject()
+	return err == nil && bearer != nil && bearer.Name == project.Name
+}
+
+// getMaintainedProject loads the project and checks the user maintains it, or the request has its access token.
 func (c *ApiController) getMaintainedProject(user *object.User) *object.Project {
 	project := c.getProject(user)
 	if project == nil {
 		return nil
 	}
-	if !project.IsMaintainer(user) {
+	if !project.IsMaintainer(user) && !c.hasProjectToken(project) {
 		c.ResponseError("Only the project's maintainers can do this")
 		return nil
 	}

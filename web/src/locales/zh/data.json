@@ -224,7 +224,7 @@
     "Follow the repository's convention, e.g. feat: update translations": "遵循仓库惯例，例如 feat: update translations",
     "For files generated at build time and not in the repository; see the project's Integration tab": "用于构建时生成且不在仓库中的文件；请参见项目的“集成”选项卡",
     "For private repositories and for pushing, e.g. a GitHub fine-grained token with Contents (and Pull requests) write access": "用于私有仓库和推送操作，例如具有 Contents（以及 Pull requests）写入权限的 GitHub 细粒度令牌",
-    "From the translation memory, then with the model, into every language": "先使用翻译记忆库，再使用模型翻译成所有语言",
+    "From the translation memory, then with the model, into every language; not on the first pull": "先用翻译记忆，再用模型，翻成所有语言；第一次拉取时不翻",
     "HTTPS URL of a git repository; Caslingo clones it to read the source files and push the translations": "Git 仓库的 HTTPS URL；Caslingo 克隆它以读取源文件并推送翻译",
     "Instructions for the model": "模型指令",
     "JSON strings": "JSON 字符串",

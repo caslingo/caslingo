@@ -224,7 +224,7 @@
     "Follow the repository's convention, e.g. feat: update translations": "Follow the repository's convention, e.g. feat: update translations",
     "For files generated at build time and not in the repository; see the project's Integration tab": "For files generated at build time and not in the repository; see the project's Integration tab",
     "For private repositories and for pushing, e.g. a GitHub fine-grained token with Contents (and Pull requests) write access": "For private repositories and for pushing, e.g. a GitHub fine-grained token with Contents (and Pull requests) write access",
-    "From the translation memory, then with the model, into every language": "From the translation memory, then with the model, into every language",
+    "From the translation memory, then with the model, into every language; not on the first pull": "From the translation memory, then with the model, into every language; not on the first pull",
     "HTTPS URL of a git repository; Caslingo clones it to read the source files and push the translations": "HTTPS URL of a git repository; Caslingo clones it to read the source files and push the translations",
     "Instructions for the model": "Instructions for the model",
     "JSON strings": "JSON strings",

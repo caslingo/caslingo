@@ -258,6 +258,9 @@ func syncProject(project *Project, job *Job) (*SyncResult, error) {
 }
 
 func runSync(ctx context.Context, project *Project, job *Job) error {
+	// the first pull reads the whole project; translate only what later pulls bring, after existing translations
+	// (in the repository, or imported) are in
+	firstSync := project.LastSyncTime == ""
 	result, err := syncProject(project, job)
 	if err != nil {
 		return err
@@ -268,13 +271,13 @@ func runSync(ctx context.Context, project *Project, job *Job) error {
 		return err
 	}
 
-	if project.AutoTranslate && IsAiEnabled() && result.Added+result.Changed > 0 {
+	if project.AutoTranslate && !firstSync && IsAiEnabled() && result.Added+result.Changed > 0 {
 		err = runTranslate(ctx, project, job, project.Languages, &TranslateOptions{State: StateTranslated})
 		if err != nil {
 			return err
 		}
 	}
-	if project.AutoPush && project.PushMode != PushModeNone && result.Added+result.Changed+result.Removed > 0 {
+	if project.AutoPush && !firstSync && project.PushMode != PushModeNone && result.Added+result.Changed+result.Removed > 0 {
 		return pushProject(project, job)
 	}
 	job.setProgress(1, 1, result.String())

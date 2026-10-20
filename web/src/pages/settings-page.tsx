@@ -185,7 +185,7 @@ export function SettingsPage() {
           <Field label={t("settings:Instructions for the model")} hint={t("settings:Style, tone, words to keep in English; the glossary is added on its own")}>
             <Textarea rows={4} value={project.instructions} onChange={e => set({ instructions: e.target.value })} placeholder={t("settings:e.g. Keep the names of the console's pages and buttons in English and in bold.")} />
           </Field>
-          <SwitchField label={t("settings:Translate new strings after each pull")} hint={t("settings:From the translation memory, then with the model, into every language")} checked={project.autoTranslate} onChange={autoTranslate => set({ autoTranslate })} />
+          <SwitchField label={t("settings:Translate new strings after each pull")} hint={t("settings:From the translation memory, then with the model, into every language; not on the first pull")} checked={project.autoTranslate} onChange={autoTranslate => set({ autoTranslate })} />
           <SwitchField label={t("settings:Push after each pull that changed strings")} checked={project.autoPush} onChange={autoPush => set({ autoPush })} />
         </Section>
 

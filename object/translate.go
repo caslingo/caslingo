@@ -219,5 +219,13 @@ func runTranslate(ctx context.Context, project *Project, job *Job, languages []s
 		message += fmt.Sprintf(" (%d requests failed, e.g. %s)", len(failures), truncate(failures[0], 200))
 	}
 	job.setProgress(total, total, message)
-	return AddChange(&Change{Project: project.Name, Language: strings.Join(languages, ","), Action: ActionMachine, Author: job.Author, NewText: message})
+	err = AddChange(&Change{Project: project.Name, Language: strings.Join(languages, ","), Action: ActionMachine, Author: job.Author, NewText: message})
+	if err != nil {
+		return err
+	}
+	if options.pushAfter && translated > 0 && ctx.Err() == nil {
+		// a push already running pushes these on its next turn
+		_, _ = StartJob(project, JobPush, nil, nil, "")
+	}
+	return nil
 }

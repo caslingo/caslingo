@@ -65,14 +65,36 @@ type TranslateOptions struct {
 	State int `json:"state"`
 	// only use the translation memory, without calling the model
 	MemoryOnly bool `json:"memoryOnly"`
+
+	// push when done (a translation started by a pull of a project that pushes on its own)
+	pushAfter bool
 }
+
+// A project runs one job at a time in each lane: pulls, pushes and imports use the repository and go one after
+// another; machine translation only writes translations, so a pull (a CI job waiting for it) need not wait for it.
+const (
+	laneRepo      = "repo"
+	laneTranslate = "translate"
+)
 
 var (
 	jobMutex    sync.Mutex
 	runningJobs = map[string]*Job{}
 	recentJobs  = map[string][]*Job{}
 	pendingSync = map[string]bool{}
+	pendingPush = map[string]bool{}
 )
+
+func getJobLane(kind string) string {
+	if kind == JobTranslate {
+		return laneTranslate
+	}
+	return laneRepo
+}
+
+func getLaneKey(project string, kind string) string {
+	return project + "/" + getJobLane(kind)
+}
 
 func (j *Job) snapshot() *Job {
 	jobMutex.Lock()
@@ -92,15 +114,17 @@ func (j *Job) setProgress(progress int, total int, message string) {
 	}
 }
 
-// GetJobs returns the project's running job (if any) first, then the recent ones, newest first.
+// GetJobs returns the project's running jobs first, then the recent ones, newest first.
 func GetJobs(project string) []*Job {
 	jobMutex.Lock()
 	defer jobMutex.Unlock()
 
 	res := []*Job{}
-	if job := runningJobs[project]; job != nil {
-		copied := *job
-		res = append(res, &copied)
+	for _, lane := range []string{laneRepo, laneTranslate} {
+		if job := runningJobs[project+"/"+lane]; job != nil {
+			copied := *job
+			res = append(res, &copied)
+		}
 	}
 	recent := recentJobs[project]
 	for i := len(recent) - 1; i >= 0; i-- {
@@ -110,24 +134,30 @@ func GetJobs(project string) []*Job {
 	return res
 }
 
+// CancelJob stops the project's running jobs, returning false when there were none.
 func CancelJob(project string) bool {
 	jobMutex.Lock()
 	defer jobMutex.Unlock()
-	job := runningJobs[project]
-	if job == nil {
-		return false
+	canceled := false
+	for _, lane := range []string{laneRepo, laneTranslate} {
+		if job := runningJobs[project+"/"+lane]; job != nil {
+			job.cancel()
+			canceled = true
+		}
 	}
-	job.cancel()
-	return true
+	return canceled
 }
 
-// StartJob starts a job unless the project is already running one. A sync asked for while another job runs
-// (a webhook during a push) runs after it.
+// StartJob starts a job unless the project is already running one in the same lane. A sync or push asked for
+// while another one runs (a webhook during a push) runs after it.
 func StartJob(project *Project, kind string, languages []string, options *TranslateOptions, author string) (*Job, error) {
+	key := getLaneKey(project.Name, kind)
 	jobMutex.Lock()
-	if running := runningJobs[project.Name]; running != nil {
+	if running := runningJobs[key]; running != nil {
 		if kind == JobSync {
 			pendingSync[project.Name] = true
+		} else if kind == JobPush {
+			pendingPush[project.Name] = true
 		}
 		jobMutex.Unlock()
 		return nil, fmt.Errorf("the project is busy with a %s job, try again when it is done", running.Kind)
@@ -145,7 +175,7 @@ func StartJob(project *Project, kind string, languages []string, options *Transl
 		options:     options,
 		cancel:      cancel,
 	}
-	runningJobs[project.Name] = job
+	runningJobs[key] = job
 	jobMutex.Unlock()
 
 	go runJob(ctx, project.Name, job)
@@ -198,14 +228,21 @@ func finishJob(ctx context.Context, projectName string, job *Job, err error) {
 		job.Status = JobDone
 	}
 	job.cancel()
-	delete(runningJobs, projectName)
+	delete(runningJobs, getLaneKey(projectName, job.Kind))
 	recent := append(recentJobs[projectName], job)
 	if len(recent) > 20 {
 		recent = recent[len(recent)-20:]
 	}
 	recentJobs[projectName] = recent
-	runPending := pendingSync[projectName]
-	delete(pendingSync, projectName)
+	runSyncNext, runPushNext := false, false
+	if getJobLane(job.Kind) == laneRepo {
+		runSyncNext = pendingSync[projectName]
+		runPushNext = pendingPush[projectName] && !runSyncNext
+		delete(pendingSync, projectName)
+		if runPushNext {
+			delete(pendingPush, projectName)
+		}
+	}
 	jobMutex.Unlock()
 
 	if err != nil {
@@ -220,8 +257,10 @@ func finishJob(ctx context.Context, projectName string, job *Job, err error) {
 			}
 			_ = updateProjectStatus(project, "last_error")
 		}
-		if runPending {
+		if runSyncNext {
 			_, _ = StartJob(project, JobSync, nil, nil, "")
+		} else if runPushNext {
+			_, _ = StartJob(project, JobPush, nil, nil, "")
 		}
 	}
 }
@@ -271,13 +310,15 @@ func runSync(ctx context.Context, project *Project, job *Job) error {
 		return err
 	}
 
+	autoPush := project.AutoPush && !firstSync && project.PushMode != PushModeNone && result.Added+result.Changed+result.Removed > 0
 	if project.AutoTranslate && !firstSync && IsAiEnabled() && result.Added+result.Changed > 0 {
-		err = runTranslate(ctx, project, job, project.Languages, &TranslateOptions{State: StateTranslated})
-		if err != nil {
-			return err
+		// in its own job, which pushes when done; if one is already running, the next pull catches up
+		_, err = StartJob(project, JobTranslate, nil, &TranslateOptions{State: StateTranslated, pushAfter: autoPush}, "")
+		if err == nil {
+			autoPush = false
 		}
 	}
-	if project.AutoPush && !firstSync && project.PushMode != PushModeNone && result.Added+result.Changed+result.Removed > 0 {
+	if autoPush {
 		return pushProject(project, job)
 	}
 	job.setProgress(1, 1, result.String())

@@ -45,6 +45,9 @@ vite.config.ts.timestamp-*
 # Go
 /caslingo
 
+# a server's own settings and secrets (see conf/conf.go)
+/conf/app.local.conf
+
 # runtime data: the SQLite database, the cloned repositories, uploaded files and beego sessions
 *.db
 *.db-shm

@@ -1,0 +1,9 @@
+.git
+web/node_modules
+web/build
+repos
+files
+tmp
+*.db
+*.db-shm
+*.db-wal

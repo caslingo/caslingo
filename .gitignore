@@ -31,3 +31,25 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Node
+node_modules/
+*.tsbuildinfo
+.vite/
+vite.config.ts.timestamp-*
+.idea
+
+# built frontend (cd web && yarn build)
+/web/build/
+
+# Go
+/caslingo
+
+# runtime data: the SQLite database, the cloned repositories, uploaded files and beego sessions
+*.db
+*.db-shm
+*.db-wal
+/repos/
+/files/
+tmp/
+logs/
